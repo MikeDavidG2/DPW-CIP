@@ -471,7 +471,7 @@ if __name__ == "__main__":
 
     # Find and gather settings from the ini file
     localPath = sys.path[0]
-    settingsFile = os.path.join(localPath, "settings.ini")
+    settingsFile = os.path.join(localPath, "SDW_to_AGOL_settings.ini")
 
     if os.path.isfile(settingsFile):
         config = ConfigParser.ConfigParser()
@@ -534,3 +534,4 @@ if __name__ == "__main__":
             agol.enableSharing(fsID, everyone, orgs, groups)
 
         print("\nfinished.")
+    raw_input('Press "ENTER" to continue...')
