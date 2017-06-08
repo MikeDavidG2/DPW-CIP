@@ -21,7 +21,7 @@ import random
 
 from xml.etree import ElementTree as ET
 import arcpy
-
+import shutil
 
 class AGOLHandler(object):
 
@@ -82,7 +82,7 @@ class AGOLHandler(object):
             resultList = jsonResponse['results']
             for it in resultList:
                 if it["title"] == self.serviceName:
-                    print("found {} : {}").format(findType, it["id"])
+                    print("Found {} : {}").format(findType, it["id"])
                     return it["id"]
 
     def findFolder(self, folderName=None):
@@ -534,5 +534,7 @@ if __name__ == "__main__":
         if ast.literal_eval(shared):
             agol.enableSharing(fsID, everyone, orgs, groups)
 
-        print("\nfinished.")
+        print 'Deleting tempDir...'
+        shutil.rmtree(tempDir)
+        print("\nFinished.")
     raw_input('Press "ENTER" to continue...')
