@@ -471,13 +471,13 @@ if __name__ == "__main__":
 
     # Find and gather settings from the ini file
     localPath = sys.path[0]
-    settingsFile = os.path.join(localPath, "SDW_to_AGOL_settings.ini")
+    settingsFile = os.path.join(localPath, "Settings_SDW_to_AGOL.ini")
 
     if os.path.isfile(settingsFile):
         config = ConfigParser.ConfigParser()
         config.read(settingsFile)
     else:
-        print("INI file not found. \nMake sure a valid 'settings.ini' file exists in the same directory as this script.")
+        print("INI file not found. \nMake sure a valid '.ini' file exists in the same directory as this script.")
         sys.exit()
 
     # AGOL Credentials
@@ -521,6 +521,7 @@ if __name__ == "__main__":
     agol = AGOLHandler(inputUsername, inputPswd, serviceName, folderName, proxyDict)
 
     # Turn map document into .SD file for uploading
+    print 'Using MXD at: {} to create .SD file'.format(MXD)
     makeSD(MXD, serviceName, tempDir, finalSD, maxRecords, tags, summary)
 
     # overwrite the existing .SD on arcgis.com

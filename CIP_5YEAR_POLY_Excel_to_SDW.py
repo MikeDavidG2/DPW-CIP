@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Name:        Update_CIP_5YEAR_POLY
+# Name:        CIP_5YEAR_POLY_Excel_to_SDW.py
 """
 Purpose:
   To update the CIP_5YEAR_POLY feature class on the Blue Workspace (SDW) using
@@ -38,24 +38,35 @@ Purpose:
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
-import arcpy, os
+import arcpy, os, ConfigParser
 arcpy.env.overwriteOutput = True
 
 def main():
     #---------------------------------------------------------------------------
-    #                              Set variables
+    #                 Find and read the ini file
+    localPath = sys.path[0]
+    settingsFile = os.path.join(localPath, "Settings_Excel_to_SDW.ini")
 
+    if os.path.isfile(settingsFile):
+        config = ConfigParser.ConfigParser()
+        config.read(settingsFile)
+    else:
+        print("INI file not found. \nMake sure a valid '.ini' file exists in the same directory as this script.")
+        sys.exit()
+
+    #---------------------------------------------------------------------------
+    #                              Set variables
     # FGDB to import the Excel table info, user must create FGDB, this is a wkg directory,
-    # NOT the directory of the Feature Class to update
-    FGDB_path = r'P:\CIP\20170403_CIP_to_App\Data\CIP_Imported_Excel.gdb'          # Full path; Should be constant
+    # ***NOT the directory of the Feature Class to update
+    wkg_FGDB = config.get('FGDB', 'wkg_FGDB')                                           # Get from INI file
 
     # Excel file info
-    excel_file        = r"P:\CIP\20170403_CIP_to_App\Working\CIP_5YEAR_POLY.xlsx"  # Full path; WILL POSSIBLY CHANGE
-    sheet_to_import   = 'CIP_5YEAR_POLY'  # Sheet name                                        ; Should be constant
-    join_field        = 'PROJECT_ID'      # Field used to join (primary key)                  ; Should be constant
+    excel_file        = config.get('Excel', 'EXCEL_FILE')                               # Get from INI file
+    sheet_to_import   = 'CIP_5YEAR_POLY'  # Sheet name                                  ; Should be constant
+    join_field        = 'PROJECT_ID'      # Field used to join (primary key)            ; Should be constant
 
     # SDW connection info, this is the FC to be updated (can be pointed to FGDB to update a FGDB)
-    sdw_connection        = r'Database Connections\AD@ATLANTIC@SDW.sde\SDW.PDS.CIP'     # WILL POSSIBLY CHANGE
+    sdw_connection        = config.get('SDW', 'CONNECTION')                             # Get from INI file
     sdw_cip_fc_name       = 'SDW.PDS.CIP_5YEAR_POLY'                                    # Should be constant
     sdw_cip_fc_path       = os.path.join(sdw_connection, sdw_cip_fc_name)               # Should be constant
     ##sdw_lueg_updates_path = os.path.join(sdw_connection, 'SDW.PDS.LUEG_UPDATES')        # Should be constant, only used for reporting
@@ -93,7 +104,7 @@ def main():
     dt_to_append = Get_DT_To_Append()
 
     # Import Excel to FGDB Table
-    imported_table = os.path.join(FGDB_path, sheet_to_import + '_' + dt_to_append)
+    imported_table = os.path.join(wkg_FGDB, sheet_to_import + '_' + dt_to_append)
     Excel_To_Table(excel_file, imported_table, sheet_to_import)
 
     # Validate the imported table data (make sure it has the correct fields)
@@ -122,10 +133,16 @@ def main():
     # Let user know that they need to review the data and update the LUEG_UPDATES table
     # in order for Blue SDE can be updated
     if valid_table == True:
-        print '***Updated the data in BLUE SDW, but you are NOT DONE YET! To update BLUE SDE please:***'
-        print '  1) Review the updated Feature Class at: {}'.format(sdw_cip_fc_path)
-        print '  2) Then, update the date for: CIP_5YEAR_POLY, in: Database Connections\AD@ATLANTIC@SDW.sde\SDW.PDS.LUEG_UPDATES'
-        print '  3) In a few days, check to confirm that the changes from BLUE SDE have replicated to County SDEP\n'
+        print '***Updated the data in BLUE SDW, but you are NOT DONE YET! To continue process please:***'
+        print '  TO UPDATE AGOL Feature Service:'
+        print '    1) Review the updated Feature Class at: {}'.format(sdw_cip_fc_path)
+        print '    1) Double click on script CIP_5YEAR_POLY_SDW_to_AGOL.py to update.'
+        print '    2) Confirm that the script updated the feature service on AGOL.'
+        print '    3) If errors, first confirm that SDW_to_AGOL_settings.ini has correct settings.\n'
+        print '  TO UPDATE BLUE SDE:'
+        print '    1) Review the updated Feature Class at: {}'.format(sdw_cip_fc_path)
+        print '    2) Then, update the date for: CIP_5YEAR_POLY, in: Database Connections\AD@ATLANTIC@SDW.sde\SDW.PDS.LUEG_UPDATES'
+        print '    3) In a few days, check to confirm that the changes from BLUE SDE have replicated to County SDEP\n'
 
     # If there were any projects in SDW, but not in import table warn user
     if (len(ids_not_in_imprt_tbl) != 0):
