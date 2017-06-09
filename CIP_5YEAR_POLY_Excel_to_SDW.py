@@ -100,6 +100,11 @@ def main():
     #---------------------------------------------------------------------------
     #                       Start calling FUNCTIONS
 
+    if not os.path.isfile(excel_file):
+        print '***ERROR! there is no file: {}***'.format(excel_file)
+        print '   Please save the Excel file you wish to use to update SDW to the above path/name.'
+        quit()
+
     # Get DateTime to append to the imported Excel table
     dt_to_append = Get_DT_To_Append()
 
@@ -122,6 +127,11 @@ def main():
 
         # Update fields from imported table to SDW Feature Class
         Update_Fields(sdw_cip_fc_path, join_field, imported_table, sdw_field_ls)
+
+        # Append dt_to_append to the end of excel_file
+        new_name = os.path.dirname(excel_file) + '\\' + (os.path.basename(excel_file.split('.')[0])) + '_' + dt_to_append + '.xlsx'
+        print 'Renaming: {}\n  To: {}'.format(excel_file, new_name)
+        os.rename(excel_file, new_name)
 
     #---------------------------------------------------------------------------
     #---------------------------------------------------------------------------
