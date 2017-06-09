@@ -233,7 +233,7 @@ class AGOLHandler(object):
                     time.sleep(2)
 
                 if status == 'completed':
-                    print("item finished published")
+                    print("Item finished published")
                     return jsonResponse['services'][0]['serviceItemId']
                 if status == 'failed':
                     raise("Status of publishing returned FAILED.")
@@ -534,7 +534,7 @@ if __name__ == "__main__":
         if ast.literal_eval(shared):
             agol.enableSharing(fsID, everyone, orgs, groups)
 
-        print 'Deleting tempDir...'
+        print '\nDeleting tempDir...'
         shutil.rmtree(tempDir)
         print("\nFinished.")
     raw_input('Press "ENTER" to continue...')

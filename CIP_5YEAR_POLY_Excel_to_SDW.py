@@ -43,7 +43,7 @@ arcpy.env.overwriteOutput = True
 
 def main():
     #---------------------------------------------------------------------------
-    #                 Find and read the ini file
+    #                 Find and read the ini file to get some variables
     localPath = sys.path[0]
     settingsFile = os.path.join(localPath, "Settings_Excel_to_SDW.ini")
 
@@ -67,7 +67,7 @@ def main():
 
     # SDW connection info, this is the FC to be updated (can be pointed to FGDB to update a FGDB)
     sdw_connection        = config.get('SDW', 'CONNECTION')                             # Get from INI file
-    sdw_cip_fc_name       = 'SDW.PDS.CIP_5YEAR_POLY'                                    # Should be constant
+    sdw_cip_fc_name       = config.get('SDW', 'FEATURE_CLASS')                          # Get from INI file
     sdw_cip_fc_path       = os.path.join(sdw_connection, sdw_cip_fc_name)               # Should be constant
     ##sdw_lueg_updates_path = os.path.join(sdw_connection, 'SDW.PDS.LUEG_UPDATES')        # Should be constant, only used for reporting
 
@@ -141,8 +141,8 @@ def main():
         print '    3) If errors, first confirm that SDW_to_AGOL_settings.ini has correct settings.\n'
         print '  TO UPDATE BLUE SDE:'
         print '    1) Review the updated Feature Class at: {}'.format(sdw_cip_fc_path)
-        print '    2) Then, update the date for: CIP_5YEAR_POLY, in: Database Connections\AD@ATLANTIC@SDW.sde\SDW.PDS.LUEG_UPDATES'
-        print '    3) In a few days, check to confirm that the changes from BLUE SDE have replicated to County SDEP\n'
+        print '    2) Then, update the date for: CIP_5YEAR_POLY, in the SDW.PDS.LUEG_UPDATES table.'
+        print '    3) In a few days, check to confirm that the changes from BLUE SDE have replicated to County SDEP.\n'
 
     # If there were any projects in SDW, but not in import table warn user
     if (len(ids_not_in_imprt_tbl) != 0):
@@ -158,7 +158,7 @@ def main():
         for proj in ids_not_in_sdw:
             print '  {}'.format(proj)
         print '  This means there is no feature in SDW to update attributes.  Contact CIP for project footprint.'
-        print '  Please create a polygon in SDW with the above project number to update this project with its attributes, all other attributes in SDW can be <NULL>.\n'
+        print '  Please create a polygon in SDW with the above project number and run this script again to update the new project with the Excel\'s attributes.\n'
 
     # If there were any projects with mismatched NAMEs, warn user that those projects' attributes were not updated by the script
     if (len(ids_w_NAME_not_match) != 0):
@@ -171,9 +171,9 @@ def main():
         print '\n  The above projects did not have their attributes updated in SDW by the imported table because of an error.'
         print '  This error happens when a project NAME has been changed in the Excel sheet.'
         print '  Please find out if:'
-        print '    A) The NAME was legitemately and intentionally changed by CIP for the specific project (then make the correction in SDW),'
-        print '    OR B) if the original project was deleted in the Excel sheet and the PROJECT_ID was reused for a new project.'
-        print '    If B, then:'
+        print '    A) The NAME was legitemately and intentionally changed by CIP for the specific project, then:'
+        print '      1) You should make the changes in SDW and run this script again.'
+        print '    B) If the original project was deleted in the Excel sheet and the PROJECT_ID was reused for a new project, then:'
         print '      1) The attribute information from the deleted project SDW should be entered back into the import table for the correct PROJECT_ID.'
         print '      2) The new project that was in Excel that is reusing the original PROJECT_ID, should be reassigned a new and unused PROJECT_ID.'
         print '      3) Inform CIP that they cannot delete projects from the Excel spreadsheet and that PROJECT_IDs need to remain unique.'
