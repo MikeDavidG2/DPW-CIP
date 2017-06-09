@@ -1,4 +1,4 @@
-# Update.py - update hosted feature services by replacing the .SD file
+# CIP_5YEAR_POLY_SDW_to_AGOL.py - update hosted feature services by replacing the .SD file
 #   and calling publishing (with overwrite) to update the feature service
 # Edits by Mike Grue are noted with <MG MM/DD/YY ... >
 # Requires a Configuration settings file (.ini) in the same directory as this script

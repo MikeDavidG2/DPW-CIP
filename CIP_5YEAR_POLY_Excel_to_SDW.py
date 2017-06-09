@@ -252,7 +252,7 @@ def Excel_To_Table(input_excel_file, out_table, sheet):
 
     print 'Starting Excel_To_Table()...'
 
-    print '  Importing Excel file: {}\{}\n  To: {}'.format(input_excel_file, sheet, out_table)
+    print '  Importing Excel sheet: {}\{}\n  To: {}'.format(input_excel_file, sheet, out_table)
 
     # Perform conversion
     arcpy.ExcelToTable_conversion(input_excel_file, out_table, sheet)
