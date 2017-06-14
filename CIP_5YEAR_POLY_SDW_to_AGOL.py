@@ -142,7 +142,7 @@ class AGOLHandler(object):
                 status = self.item_status(itemPartID)['status']
                 time.sleep(1.5)
 
-            print("updated SD:   {}".format(itemPartID))
+            print("Updated SD:   {}".format(itemPartID))
             return True
 
         else:
