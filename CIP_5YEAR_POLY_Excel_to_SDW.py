@@ -182,11 +182,11 @@ def main():
         print '  This error happens when a project NAME has been changed in the Excel sheet.'
         print '  Please find out if:'
         print '    A) The NAME was legitemately and intentionally changed by CIP for the specific project, then:'
-        print '      1) You should make the changes in SDW and run this script again.'
+        print '      1) You should update the project NAME in SDW and run this script again.'
         print '    B) If the original project was deleted in the Excel sheet and the PROJECT_ID was reused for a new project, then:'
-        print '      1) The attribute information from the deleted project SDW should be entered back into the import table for the correct PROJECT_ID.'
+        print '      1) The attribute information (found in SDW.PDS.CIP_5YEAR_POLY) should be entered back into the excel table for the deleted project with its old PROJECT_ID.'
         print '      2) The new project that was in Excel that is reusing the original PROJECT_ID, should be reassigned a new and unused PROJECT_ID.'
-        print '      3) Inform CIP that they cannot delete projects from the Excel spreadsheet and that PROJECT_IDs need to remain unique.'
+        print '      3) Inform CIP that they cannot delete projects from the Excel spreadsheet, that PROJECT_IDs need to remain unique, and cannot be reused.'
 
     # If the import table was not valid, have this error the last item in the report
     if valid_table == False:
