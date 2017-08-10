@@ -56,20 +56,28 @@ def main():
 
     #---------------------------------------------------------------------------
     #                              Set variables
+    #---------------------------------------------------------------------------
+
     # FGDB to import the Excel table info, user must create FGDB, this is a wkg directory,
     # ***NOT the directory of the Feature Class to update
     wkg_FGDB = config.get('FGDB', 'wkg_FGDB')                                           # Get from INI file
 
+
     # Excel file info
     excel_file        = config.get('Excel', 'EXCEL_FILE')                               # Get from INI file
-    sheet_to_import   = 'CIP_5YEAR_POLY'  # Sheet name                                  ; Should be constant
-    join_field        = 'PROJECT_ID'      # Field used to join (primary key)            ; Should be constant
+    sheet_to_import   = 'CIP_5YEAR_POLY'  # Sheet name                                  # Should be constant
+    join_field        = 'PROJECT_ID'      # Field used to join (primary key)            # Should be constant
 
-    # SDW connection info, this is the FC to be updated (can be pointed to FGDB to update a FGDB)
-    sdw_connection        = config.get('SDW', 'CONNECTION')                             # Get from INI file
-    sdw_cip_fc_name       = config.get('SDW', 'FEATURE_CLASS')                          # Get from INI file
-    sdw_cip_fc_path       = os.path.join(sdw_connection, sdw_cip_fc_name)               # Should be constant
-    ##sdw_lueg_updates_path = os.path.join(sdw_connection, 'SDW.PDS.LUEG_UPDATES')        # Should be constant, only used for reporting
+
+    # SDW connection info, this is the FC and budget table to be updated (can be pointed to FGDB to update a FGDB)
+    sdw_connection          = config.get('SDW', 'CONNECTION')                             # Get from INI file
+
+    sdw_cip_fc_name         = config.get('SDW', 'FEATURE_CLASS')                          # Get from INI file
+    sdw_cip_fc_path         = os.path.join(sdw_connection, sdw_cip_fc_name)               # Should be constant
+
+    sdw_cip_budget_tbl_name = config.get('SDW', 'BUDGET_TABLE')                           # Get from INI file
+    sdw_cip_budget_tbl_path = os.path.join(sdw_connection, sdw_cip_budget_tbl_name)       # Should be constant
+
 
     # List of Fields to update in SDW Feature Class
     # 'PROJECT_ID' not in below list since that is the field used to join
@@ -79,6 +87,9 @@ def main():
                       'PLANNING_GROUP', 'SUPERVISOR_DISTRICT', 'THOMAS_BROTHERS',
                       'PROJECT_MANAGER', 'PM_EMAIL', 'PM_PHONE', 'ORACLE_NUMBER',
                       'DESCRIPTION', 'URL_LINK']
+
+    # List of Fields that are in the budget table that shouldn't be updated
+    budget_flds_to_ignore = ['OBJECTID', 'PROJECT_ID']
 
     # Dictionary of [TYPE] domains.
     #The left side is the text in Excel : The right side is the numerical value the [TYPE] field expects in SDW
@@ -99,6 +110,7 @@ def main():
 
     #---------------------------------------------------------------------------
     #                       Start calling FUNCTIONS
+    #---------------------------------------------------------------------------
 
     if not os.path.isfile(excel_file):
         print '***ERROR! there is no file: {}***'.format(excel_file)
@@ -127,6 +139,21 @@ def main():
 
         # Update fields from imported table to SDW Feature Class
         Update_Fields(sdw_cip_fc_path, join_field, imported_table, sdw_field_ls)
+
+        #-----------------------------------------------------------------------
+##        # Update fields from imported table to SDW Budget Table
+##        # Get a list of fields from the budget_table that need to be updated
+##        fields_to_analyze = arcpy.ListFields(sdw_cip_budget_tbl_path)  # List of all fields in budget_table
+##        fields_to_update = []  # Container for fields that should be updated
+##        for field in fields_to_analyze:
+##
+##            if field.name not in budget_flds_to_ignore:
+##                fields_to_update.append(field.name)
+##            else:
+##                pass
+##
+##        Update_Fields(sdw_cip_budget_tbl_path, join_field, imported_table, fields_to_update)
+        #-----------------------------------------------------------------------
 
         # Append dt_to_append to the end of excel_file
         new_name = os.path.dirname(excel_file) + '\\' + (os.path.basename(excel_file.split('.')[0])) + '_' + dt_to_append + '.xlsx'
@@ -591,14 +618,14 @@ def Process_Table(imported_table, type_dict):
 #-------------------------------------------------------------------------------
 #                         FUNCTION: Update_Fields()
 
-def Update_Fields(sdw_cip_fc_path, join_field, imported_table, sdw_field_ls):
+def Update_Fields(target_obj, join_field, obj_to_join, sdw_field_ls):
     """
     PARAMETERS:
-      sdw_cip_fc_path (str): The full path of the SDW CIP Feature Class.
+      target_obj (str): The full path of the SDW CIP Feature Class.
 
       join_field (str): The name of the field used to join two objects.
 
-      imported_table (str): The full path of the imported_table generated from
+      obj_to_join (str): The full path of the obj_to_join generated from
         Excel_To_Table()
 
       sdw_field_ls (list): List of the fields that are in SDW (and imported table)
@@ -614,23 +641,23 @@ def Update_Fields(sdw_cip_fc_path, join_field, imported_table, sdw_field_ls):
 
     print 'Starting Update_Fields()...'
 
-    joined_fc = Join_2_Objects(sdw_cip_fc_path, join_field, imported_table, join_field, 'KEEP_COMMON')
+    joined_obj = Join_2_Objects(target_obj, join_field, obj_to_join, join_field, 'KEEP_COMMON')
 
     # Get the basename of the imported table, i.e. "CIP_5YEAR_POLY_2017_5_15__9_38_50"
     # Will be used in 'expression' below
-    import_table_name = os.path.basename(imported_table)
+    obj_to_join_name = os.path.basename(obj_to_join)
 
-    # Get the basename of the sdw_cip_fc_path i.e. 'CIP_5YEAR_POLY'
+    # Get the basename of the target_obj i.e. 'CIP_5YEAR_POLY'
     # Will be used in the 'where_clause' and 'SearchCursor' below
-    sdw_cip_fc_name = os.path.basename(sdw_cip_fc_path)
+    target_obj_name = os.path.basename(target_obj)
 
     for field in sdw_field_ls:
 
-        field_to_calc = '{}.{}'.format(sdw_cip_fc_name, field)
-        expression    = '!{}.{}!'.format(import_table_name, field)
+        field_to_calc = '{}.{}'.format(target_obj_name, field)
+        expression    = '!{}.{}!'.format(obj_to_join_name, field)
 
         print '  In joined_fc, calculating field: "{}", to equal: "{}"'.format(field_to_calc, expression)
-        arcpy.CalculateField_management(joined_fc, field_to_calc, expression, 'PYTHON_9.3')
+        arcpy.CalculateField_management(joined_obj, field_to_calc, expression, 'PYTHON_9.3')
 
     print 'Finished Updating Fields\n'
 
@@ -689,8 +716,13 @@ def Join_2_Objects(target_obj, target_join_field, to_join_obj, to_join_field, jo
         print '      Made TABLE VIEW for: {}'.format(to_join_obj)
 
     # Join the layers
-    print '      Joining layers'
-    arcpy.AddJoin_management('target_obj', target_join_field, 'to_join_obj', to_join_field, join_type)
+    print '      Joining "{}"\n         With "{}"\n           On "{}"\n         Type "{}"\n'.format(target_obj, to_join_obj, to_join_field, join_type)
+    try:
+        arcpy.AddJoin_management('target_obj', target_join_field, 'to_join_obj', to_join_field, join_type)
+    except Exception as e:
+        print '*** ERROR with join ***'
+        print str(e)
+        print arcpy.GetMessages()
 
     # Print the fields (only really needed during testing)
 ##    fields = arcpy.ListFields('target_obj')
