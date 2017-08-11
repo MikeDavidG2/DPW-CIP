@@ -88,8 +88,6 @@ def main():
                       'PROJECT_MANAGER', 'PM_EMAIL', 'PM_PHONE', 'ORACLE_NUMBER',
                       'DESCRIPTION', 'URL_LINK']
 
-    # List of Fields that are in the budget table that shouldn't be updated
-    budget_flds_to_ignore = ['OBJECTID', 'PROJECT_ID']
 
     # Dictionary of [TYPE] domains.
     #The left side is the text in Excel : The right side is the numerical value the [TYPE] field expects in SDW
@@ -109,11 +107,12 @@ def main():
     }
 
     #---------------------------------------------------------------------------
-    #                       Start calling FUNCTIONS
+    #                       Start running script
     #---------------------------------------------------------------------------
 
+    # Make sure there is an excel_file to import
     if not os.path.isfile(excel_file):
-        print '***ERROR! there is no file: {}***'.format(excel_file)
+        print '***ERROR! there is no file: {} ***'.format(excel_file)
         print '   Please save the Excel file you wish to use to update SDW to the above path/name.'
         quit()
 
@@ -134,30 +133,38 @@ def main():
     valid_table, ids_not_in_imprt_tbl, ids_not_in_sdw, ids_w_NAME_not_match, NAME_in_SDW, NAME_in_imprt_tbl = Validate_Table(sdw_field_ls, imported_table, sdw_cip_fc_path)
 
     if valid_table == True:
-        # If import table was valid, Process table
+        # If import table was valid, Process the imported_table
         Process_Table(imported_table, type_dict)
 
-        # Update fields from imported table to SDW Feature Class
+        #-----------------------------------------------------------------------
+        #        Update fields from imported table to SDW Feature Class
+        print '\n--------------------------------------------------------------'
+        print 'Update CIP_5YEAR_POLY\n'
         Update_Fields(sdw_cip_fc_path, join_field, imported_table, sdw_field_ls)
 
         #-----------------------------------------------------------------------
-##        # Update fields from imported table to SDW Budget Table
-##        # Get a list of fields from the budget_table that need to be updated
-##        fields_to_analyze = arcpy.ListFields(sdw_cip_budget_tbl_path)  # List of all fields in budget_table
-##        fields_to_update = []  # Container for fields that should be updated
-##        for field in fields_to_analyze:
-##
-##            if field.name not in budget_flds_to_ignore:
-##                fields_to_update.append(field.name)
-##            else:
-##                pass
-##
-##        Update_Fields(sdw_cip_budget_tbl_path, join_field, imported_table, fields_to_update)
-        #-----------------------------------------------------------------------
+        #         Update fields from imported_table to SDW Budget Table
 
-        # Append dt_to_append to the end of excel_file
+        # Get a list of fields from the imported_table that need to be updated
+        fields_to_analyze = arcpy.ListFields(imported_table)  # List of all fields in the imported table
+        fields_to_update = []  # Container for fields that should be updated
+        for field in fields_to_analyze:
+            fld_name = field.name
+            if fld_name.startswith('FY'):  # All budget fields to update start with 'FY'
+                fields_to_update.append(fld_name)
+                ##print 'Will update: "{}"'.format(fld_name)  # Only needed for testing
+            else:
+                pass
+
+        print '\n--------------------------------------------------------------'
+        print 'Update CIP_5YR_BUDGET_LUT\n'
+        Update_Fields(sdw_cip_budget_tbl_path, join_field, imported_table, fields_to_update)
+
+        #-----------------------------------------------------------------------
+        #               Append dt_to_append to the end of excel_file
         new_name = os.path.dirname(excel_file) + '\\' + (os.path.basename(excel_file.split('.')[0])) + '_' + dt_to_append + '.xlsx'
-        print 'Renaming: {}\n  To: {}'.format(excel_file, new_name)
+        print '\n--------------------------------------------------------------'
+        print 'Renaming: {}\n      To: {}'.format(excel_file, new_name)
         os.rename(excel_file, new_name)
 
     #---------------------------------------------------------------------------
@@ -178,7 +185,8 @@ def main():
         print '    3) If errors, first confirm that SDW_to_AGOL_settings.ini has correct settings.\n'
         print '  TO UPDATE BLUE SDE:'
         print '    1) Review the updated Feature Class at: {}'.format(sdw_cip_fc_path)
-        print '    2) Then, update the date for: CIP_5YEAR_POLY, in the SDW.PDS.LUEG_UPDATES table.'
+        print '    2) Review the updated Table at:         {}'.format(sdw_cip_budget_tbl_path)
+        print '    2) Then, update the date for: CIP_5YEAR_POLY, and CIP_5YR_PLAN_BUDGET_LUT, in the SDW.PDS.LUEG_UPDATES table.'
         print '    3) In a few days, check to confirm that the changes from BLUE SDE have replicated to County SDEP.\n'
 
     # If there were any projects in SDW, but not in import table warn user
@@ -209,11 +217,11 @@ def main():
         print '  This error happens when a project NAME has been changed in the Excel sheet.'
         print '  Please find out if:'
         print '    A) The NAME was legitemately and intentionally changed by CIP for the specific project, then:'
-        print '      1) You should update the project NAME in SDW and run this script again.'
+        print '      1) You should make the changes in SDW and run this script again.'
         print '    B) If the original project was deleted in the Excel sheet and the PROJECT_ID was reused for a new project, then:'
-        print '      1) The attribute information (found in SDW.PDS.CIP_5YEAR_POLY) should be entered back into the excel table for the deleted project with its old PROJECT_ID.'
+        print '      1) The attribute information from the deleted project SDW should be entered back into the import table for the correct PROJECT_ID.'
         print '      2) The new project that was in Excel that is reusing the original PROJECT_ID, should be reassigned a new and unused PROJECT_ID.'
-        print '      3) Inform CIP that they cannot delete projects from the Excel spreadsheet, that PROJECT_IDs need to remain unique, and cannot be reused.'
+        print '      3) Inform CIP that they cannot delete projects from the Excel spreadsheet and that PROJECT_IDs need to remain unique.'
 
     # If the import table was not valid, have this error the last item in the report
     if valid_table == False:
@@ -373,7 +381,7 @@ def Validate_Table(sdw_field_ls, imported_table, sdw_cip_fc_path):
 
     #---------------------------------------------------------------------------
     #       2) Validate that the fields we need in SDW are in the import table
-
+    print '  ------------------------------------------------------------------'
     print '  Validating the field names in import table:'
 
     # Get a list of the names of the fields in the imported table
@@ -429,6 +437,7 @@ def Validate_Table(sdw_field_ls, imported_table, sdw_cip_fc_path):
     #---------------------------------------------------------------------------
     #      3.1) If a PROJECT_ID exists in SDW that is not in the import table,
     # warn user but do not change valid_table
+    print '  ------------------------------------------------------------------'
     print '  Validating PROJECT_ID in SDW is also in import table:'
 
     # List to contain any PROJECT_ID'S that are in SDW but not in the import table
@@ -452,7 +461,7 @@ def Validate_Table(sdw_field_ls, imported_table, sdw_cip_fc_path):
     #---------------------------------------------------------------------------
     #        3.2) Make sure that every PROJECT_ID in the import table also
     # exists in SDW warn user but do not change valid_table
-
+    print '  ------------------------------------------------------------------'
     print '  Validating PROJECT_ID in import table is also in SDW:'
 
     # list to contain any PROJECT_ID's that are in import table, but not in SDW
@@ -475,7 +484,7 @@ def Validate_Table(sdw_field_ls, imported_table, sdw_cip_fc_path):
 
     #---------------------------------------------------------------------------
     #        4) Make sure that every project has a PROJECT_ID and a NAME
-
+    print '  ------------------------------------------------------------------'
     print '  Validating that every project has a PROJECT_ID and a NAME'
 
     # Where clause to select only the invalid rows
@@ -495,7 +504,7 @@ def Validate_Table(sdw_field_ls, imported_table, sdw_cip_fc_path):
     #---------------------------------------------------------------------------
     #         5) Validate that every project NAME in SDW is the same as in
     #            the import table
-
+    print '  ------------------------------------------------------------------'
     print '  Validating that every project NAME in SDW matches the project NAME in the imported table'
 
     # Join the SDW FC and the imported table on PROJECT_ID to compare the NAME fields
@@ -547,9 +556,14 @@ def Validate_Table(sdw_field_ls, imported_table, sdw_cip_fc_path):
                     row[0] = change_value
                     cursor.updateRow(row)
 
+    # Delete the layer/view between the SDW FC and the imported table so there
+    #   is no 'holdover' when creating the next joined layer/view
+    print '\n  Deleting layer/view with the join'
+    arcpy.Delete_management(sdw_cip_join_imprt_tbl)
+
     print '  Done Validating project NAME matches SDW and imported table\n'
     #---------------------------------------------------------------------------
-
+    print '  ------------------------------------------------------------------'
     print '  valid_table = {}\n'.format(valid_table)
     print 'Finished Validating Table\n'
 
@@ -580,6 +594,7 @@ def Process_Table(imported_table, type_dict):
     """
 
     print 'Starting Process_Table()...'
+    print '  Processing "{}"\n'.format(imported_table)
 
     #---------------------------------------------------------------------------
     # 1)  Calculate field [NAME] to have all upper case letters for consistency
@@ -618,7 +633,7 @@ def Process_Table(imported_table, type_dict):
 #-------------------------------------------------------------------------------
 #                         FUNCTION: Update_Fields()
 
-def Update_Fields(target_obj, join_field, obj_to_join, sdw_field_ls):
+def Update_Fields(target_obj, join_field, obj_to_join, fields_to_update):
     """
     PARAMETERS:
       target_obj (str): The full path of the SDW CIP Feature Class.
@@ -628,15 +643,17 @@ def Update_Fields(target_obj, join_field, obj_to_join, sdw_field_ls):
       obj_to_join (str): The full path of the obj_to_join generated from
         Excel_To_Table()
 
-      sdw_field_ls (list): List of the fields that are in SDW (and imported table)
-        that will be updated.
+      fields_to_update (list): List of the fields that will be updated.
 
     RETURNS:
       none
 
     FUNCTION:
-      To calculate the fields in 'sdw_field_ls' list from the imported
-      table to the SDW feature class.
+      To calculate the fields in 'fields_to_update' list from the obj_to_join
+      to the target_obj
+
+    NOTE:
+      This Function needs access to Join_2_Objects() function in order to work.
     """
 
     print 'Starting Update_Fields()...'
@@ -651,13 +668,18 @@ def Update_Fields(target_obj, join_field, obj_to_join, sdw_field_ls):
     # Will be used in the 'where_clause' and 'SearchCursor' below
     target_obj_name = os.path.basename(target_obj)
 
-    for field in sdw_field_ls:
+    for field in fields_to_update:
 
         field_to_calc = '{}.{}'.format(target_obj_name, field)
         expression    = '!{}.{}!'.format(obj_to_join_name, field)
 
         print '  In joined_fc, calculating field: "{}", to equal: "{}"'.format(field_to_calc, expression)
         arcpy.CalculateField_management(joined_obj, field_to_calc, expression, 'PYTHON_9.3')
+
+    # Delete the layer/view between the SDW FC and the imported table so there
+    #   is no 'holdover' when creating the next joined layer/view
+    print '\n  Deleting layer/view with the join'
+    arcpy.Delete_management(joined_obj)
 
     print 'Finished Updating Fields\n'
 
@@ -695,9 +717,14 @@ def Join_2_Objects(target_obj, target_join_field, to_join_obj, to_join_field, jo
         1) Creating a layer or table view for each object ('target_obj', 'to_join_obj')
         2) Joining the layer(s) / view(s) via the 'target_join_field' and the
            'to_join_field'
+
+    NOTE:
+      This function returns a layer/view of the joined object, remember to delete
+      the joined object (arcpy.Delete_management(target_obj)) if performing
+      multiple joins in one script.
     """
 
-    print '    Starting Join_2_Objects()...'
+    print '\n    Starting Join_2_Objects()...'
 
     # Create the layer or view for the target_obj using try/except
     try:
@@ -717,20 +744,15 @@ def Join_2_Objects(target_obj, target_join_field, to_join_obj, to_join_field, jo
 
     # Join the layers
     print '      Joining "{}"\n         With "{}"\n           On "{}"\n         Type "{}"\n'.format(target_obj, to_join_obj, to_join_field, join_type)
-    try:
-        arcpy.AddJoin_management('target_obj', target_join_field, 'to_join_obj', to_join_field, join_type)
-    except Exception as e:
-        print '*** ERROR with join ***'
-        print str(e)
-        print arcpy.GetMessages()
+    arcpy.AddJoin_management('target_obj', target_join_field, 'to_join_obj', to_join_field, join_type)
 
     # Print the fields (only really needed during testing)
-##    fields = arcpy.ListFields('target_obj')
-##    print '  Fields in joined layer:'
-##    for field in fields:
-##        print '    ' + field.name
+    ##fields = arcpy.ListFields('target_obj')
+    ##print '  Fields in joined layer:'
+    ##for field in fields:
+    ##    print '    ' + field.name
 
-    print '    Finished Join_2_Objects()'
+    print '    Finished Join_2_Objects()\n'
 
     # Return the layer/view of the joined object so it can be processed
     return 'target_obj'
