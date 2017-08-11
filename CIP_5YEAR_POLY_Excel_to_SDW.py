@@ -72,8 +72,9 @@ def main():
     # SDW connection info, this is the FC and budget table to be updated (can be pointed to FGDB to update a FGDB)
     sdw_connection          = config.get('SDW', 'CONNECTION')                             # Get from INI file
 
-    sdw_cip_fc_name         = config.get('SDW', 'FEATURE_CLASS')                          # Get from INI file
-    sdw_cip_fc_path         = os.path.join(sdw_connection, sdw_cip_fc_name)               # Should be constant
+    sdw_cip_fds_name   = config.get('SDW', 'FEATURE_DATA_SET')                            # Get from INI file
+    sdw_cip_fc_name    = config.get('SDW', 'FEATURE_CLASS')                               # Get from INI file
+    sdw_cip_fc_path    = os.path.join(sdw_connection, sdw_cip_fds_name, sdw_cip_fc_name)  # Should be constant
 
     sdw_cip_budget_tbl_name = config.get('SDW', 'BUDGET_TABLE')                           # Get from INI file
     sdw_cip_budget_tbl_path = os.path.join(sdw_connection, sdw_cip_budget_tbl_name)       # Should be constant
